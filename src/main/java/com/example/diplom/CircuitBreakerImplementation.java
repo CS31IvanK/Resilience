@@ -4,23 +4,32 @@ import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.core.functions.CheckedSupplier;
-
+import lombok.Getter;
+import org.springframework.stereotype.Component;
 import java.time.Duration;
-
+@Getter
+@Component
 public class CircuitBreakerImplementation {
     private CircuitBreaker circuitBreaker;
 
-    public CircuitBreakerImplementation(String name) {
+    public CircuitBreakerImplementation() {
         CircuitBreakerConfig config = CircuitBreakerConfig.custom()
                 .failureRateThreshold(50)
-                .waitDurationInOpenState(Duration.ofSeconds(10))
+                .waitDurationInOpenState(Duration.ofSeconds(1))
                 .build();
 
         CircuitBreakerRegistry registry = CircuitBreakerRegistry.of(config);
-        this.circuitBreaker = registry.circuitBreaker(name);
+        this.circuitBreaker = registry.circuitBreaker("CircuitBreaker");
     }
 
     public <T> T execute(CheckedSupplier<T> supplier) throws Throwable {
         return circuitBreaker.executeCheckedSupplier(supplier);
+    }
+    public void updateConfig(CircuitBreakerConfig newConfig) {
+        CircuitBreakerRegistry registry = CircuitBreakerRegistry.of(newConfig);
+        this.circuitBreaker = registry.circuitBreaker("CircuitBreaker");
+    }
+    public String getConfig() {
+        return this.circuitBreaker.getCircuitBreakerConfig().toString();
     }
 }

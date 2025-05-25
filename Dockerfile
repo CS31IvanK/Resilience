@@ -1,10 +1,6 @@
 FROM openjdk:17-jdk-slim
 
-# Робоча директорія
-WORKDIR /
+WORKDIR /app
+COPY target/diplom-0.0.1-SNAPSHOT.jar app.jar
 
-# Копіюємо проект
-COPY . .
-
-# Запускаємо додаток
-CMD ["java", "-jar", "target/diplom-0.0.1-SNAPSHOT.jar"]
+CMD ["java", "-jar", "/app/app.jar"]
