@@ -18,6 +18,6 @@ public class BulkheadService {
     }
 
     public String sendRequest(int requestNumber) throws Throwable {
-        return bulkhead.executeCheckedSupplier(() -> requestService.sendRequest("Bulkhead", requestNumber));
+        return bulkhead.executeCheckedSupplier(() -> requestService.sendRequestAsync("Bulkhead", requestNumber)).join();
     }
 }

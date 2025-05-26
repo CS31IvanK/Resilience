@@ -1,11 +1,9 @@
 package com.example.diplom;
 
-import io.github.resilience4j.core.functions.CheckedSupplier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 @Component
@@ -29,7 +27,7 @@ public class ResilienceTester {
         this.retryService = retryService;
     }
 
-    @Scheduled(fixedRate = 20000)
+    @Scheduled(fixedRate = 10000)
     public void runTests() {
         executeConcurrentTest("CircuitBreaker", requestNumber -> {
             try {

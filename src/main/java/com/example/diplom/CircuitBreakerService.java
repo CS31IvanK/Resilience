@@ -14,10 +14,10 @@ public class CircuitBreakerService {
     @Autowired
     public CircuitBreakerService(CircuitBreakerImplementation circuitBreakerImplementation, RequestService requestService) {
         this.circuitBreaker = circuitBreakerImplementation.getCircuitBreaker();
-        this.requestService = new RequestService(WebClient.builder()); // ⬅ Створення окремого інстансу
+        this.requestService = new RequestService(WebClient.builder());
     }
 
     public String sendRequest(int requestNumber) throws Throwable {
-        return circuitBreaker.executeCheckedSupplier(() -> requestService.sendRequest("CircuitBreaker", requestNumber));
+        return circuitBreaker.executeCheckedSupplier(() -> requestService.sendRequestAsync("CircuitBreaker", requestNumber)).join();
     }
 }

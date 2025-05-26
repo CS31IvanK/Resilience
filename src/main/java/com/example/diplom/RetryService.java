@@ -18,6 +18,6 @@ public class RetryService {
     }
 
     public String sendRequest(int requestNumber) throws Throwable {
-        return retry.executeCheckedSupplier(() -> requestService.sendRequest("Retry", requestNumber));
+        return retry.executeCheckedSupplier(() -> requestService.sendRequestAsync("Retry", requestNumber)).join();
     }
 }

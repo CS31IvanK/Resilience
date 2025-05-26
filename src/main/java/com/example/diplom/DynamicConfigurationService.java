@@ -37,7 +37,7 @@ public class DynamicConfigurationService {
     }
 
 
-    @Scheduled(fixedRate = 10000)
+    @Scheduled(fixedRate = 5000)
     public void updateDynamicConfigurations() {
         double avgResponseTime1m = prometheusClientService.getAverageResponseTime("1m");
         double avgResponseTime5m = prometheusClientService.getAverageResponseTime("5m");
@@ -67,7 +67,7 @@ public class DynamicConfigurationService {
         timeLimiterImplementation.updateConfig(newTimeLimiterConfig);
 
         //alternative
-        int newDuration = (int) ((avgResponseTime1m > avgResponseTime5m) ? avgResponseTime1m*100 : avgResponseTime1m);
+        int newDuration = (int) ((avgResponseTime1m > avgResponseTime5m) ? avgResponseTime1m*100 : avgResponseTime1m)+1;
         CircuitBreakerConfig newCircuitBreakerConfig = CircuitBreakerConfig.custom()
                 .waitDurationInOpenState(Duration.ofSeconds(newDuration))
                 .build();

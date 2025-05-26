@@ -23,7 +23,7 @@ public class TimeLimiterService {
         return timeLimiter.executeFutureSupplier(() -> CompletableFuture.supplyAsync(() ->
         {
             try {
-                return requestService.sendRequest("TimeLimiter", requestNumber);
+                return requestService.sendRequestAsync("TimeLimiter", requestNumber).join();
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
