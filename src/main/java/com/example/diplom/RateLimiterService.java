@@ -12,12 +12,12 @@ public class RateLimiterService {
     private final RequestService requestService;
 
     @Autowired
-    public RateLimiterService(RateLimiterImplementation rateLimiterImplementation) {
+    public RateLimiterService(RateLimiterImplementation rateLimiterImplementation, RequestService requestService) {
         this.rateLimiter = rateLimiterImplementation.getRateLimiter();
-        this.requestService = new RequestService(WebClient.builder()); // ⬅ Створення окремого інстансу
+        this.requestService = requestService;
     }
 
     public String sendRequest(int requestNumber) throws Throwable {
-        return rateLimiter.executeCheckedSupplier(() -> requestService.sendRequestAsync("RateLimiter", requestNumber).join());
+        return rateLimiter.executeCheckedSupplier(() -> requestService.sendRequest("RateLimiter", requestNumber));
     }
 }

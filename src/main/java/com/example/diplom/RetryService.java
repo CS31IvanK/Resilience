@@ -12,12 +12,12 @@ public class RetryService {
     private final RequestService requestService;
 
     @Autowired
-    public RetryService(RetryImplementation retryImplementation) {
+    public RetryService(RetryImplementation retryImplementation, RequestService requestService) {
         this.retry = retryImplementation.getRetry();
-        this.requestService = new RequestService(WebClient.builder()); // ⬅ Окремий інстанс
+        this.requestService = requestService;
     }
 
     public String sendRequest(int requestNumber) throws Throwable {
-        return retry.executeCheckedSupplier(() -> requestService.sendRequestAsync("Retry", requestNumber)).join();
+        return retry.executeCheckedSupplier(() -> requestService.sendRequest("Retry", requestNumber));
     }
 }

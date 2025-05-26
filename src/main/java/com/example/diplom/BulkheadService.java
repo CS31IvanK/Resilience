@@ -12,12 +12,15 @@ public class BulkheadService {
     private final RequestService requestService;
 
     @Autowired
-    public BulkheadService(BulkheadImplementation bulkheadImplementation) {
+    public BulkheadService(BulkheadImplementation bulkheadImplementation, RequestService requestService) {
         this.bulkhead = bulkheadImplementation.getBulkhead();
-        this.requestService = new RequestService(WebClient.builder()); // ⬅ Окремий інстанс
+        this.requestService = requestService;
     }
 
     public String sendRequest(int requestNumber) throws Throwable {
-        return bulkhead.executeCheckedSupplier(() -> requestService.sendRequestAsync("Bulkhead", requestNumber)).join();
+        // Використовуємо механізм Bulkhead для обмеження одночасних запитів
+        return bulkhead.executeCheckedSupplier(() ->
+                requestService.sendRequest("Bulkhead", requestNumber)
+        );
     }
 }

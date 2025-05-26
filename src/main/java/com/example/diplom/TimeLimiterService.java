@@ -14,16 +14,16 @@ public class TimeLimiterService {
     private final RequestService requestService;
 
     @Autowired
-    public TimeLimiterService(TimeLimiterImplementation timeLimiterImplementation) {
+    public TimeLimiterService(TimeLimiterImplementation timeLimiterImplementation, RequestService requestService) {
         this.timeLimiter = timeLimiterImplementation.getTimeLimiter();
-        this.requestService = new RequestService(WebClient.builder()); // ⬅ Окремий інстанс
+        this.requestService = requestService;
     }
 
     public String sendRequest(int requestNumber) throws Exception {
         return timeLimiter.executeFutureSupplier(() -> CompletableFuture.supplyAsync(() ->
         {
             try {
-                return requestService.sendRequestAsync("TimeLimiter", requestNumber).join();
+                return requestService.sendRequest("TimeLimiter", requestNumber);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }

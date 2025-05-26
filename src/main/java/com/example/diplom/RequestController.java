@@ -1,5 +1,6 @@
 package com.example.diplom;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -21,6 +22,7 @@ public class RequestController {
     private final TimeLimiterService timeLimiterService;
     private final ExecutorService executorService = Executors.newFixedThreadPool(5);
 
+    @Autowired
     public RequestController(RetryService retryService,
                              CircuitBreakerService circuitBreakerService,
                              BulkheadService bulkheadService,
@@ -55,7 +57,7 @@ public class RequestController {
             try {
                 return circuitBreakerService.sendRequest(requestNumber);
             } catch (Throwable e) {
-                return "Circuit Breaker failed: " + e.getMessage();
+                return "CircuitBreaker failed: " + e.getMessage();
             }
         }, executorService);
 
@@ -63,7 +65,7 @@ public class RequestController {
             try {
                 return rateLimiterService.sendRequest(requestNumber);
             } catch (Throwable e) {
-                return "Rate Limiter failed: " + e.getMessage();
+                return "RateLimiter failed: " + e.getMessage();
             }
         }, executorService);
 
@@ -71,11 +73,12 @@ public class RequestController {
             try {
                 return timeLimiterService.sendRequest(requestNumber);
             } catch (Throwable e) {
-                return "Time Limiter failed: " + e.getMessage();
+                return "TimeLimiter failed: " + e.getMessage();
             }
         }, executorService);
 
-        return CompletableFuture.allOf(retryFuture, bulkheadFuture, circuitBreakerFuture, rateLimiterFuture, timeLimiterFuture)
+        return CompletableFuture.allOf(retryFuture, bulkheadFuture, circuitBreakerFuture,
+                        rateLimiterFuture, timeLimiterFuture)
                 .thenApply(v -> List.of(
                         retryFuture.join(),
                         bulkheadFuture.join(),
