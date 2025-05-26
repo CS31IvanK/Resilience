@@ -22,7 +22,9 @@ public class BulkheadImplementation {
         BulkheadRegistry registry = BulkheadRegistry.of(config);
         this.bulkhead = registry.bulkhead("Bulkhead");
     }
-
+    public Bulkhead getBulkhead() {
+        return this.bulkhead;
+    }
     public <T> T execute(CheckedSupplier<T> supplier) throws Throwable {
         return bulkhead.executeCheckedSupplier(supplier);
     }

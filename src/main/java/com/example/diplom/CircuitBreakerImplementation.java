@@ -25,6 +25,9 @@ public class CircuitBreakerImplementation {
     public <T> T execute(CheckedSupplier<T> supplier) throws Throwable {
         return circuitBreaker.executeCheckedSupplier(supplier);
     }
+    public CircuitBreaker getCircuitBreaker() {
+        return this.circuitBreaker;
+    }
     public void updateConfig(CircuitBreakerConfig newConfig) {
         CircuitBreakerRegistry registry = CircuitBreakerRegistry.of(newConfig);
         this.circuitBreaker = registry.circuitBreaker("CircuitBreaker");

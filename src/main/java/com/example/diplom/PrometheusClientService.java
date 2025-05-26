@@ -29,7 +29,7 @@ public class PrometheusClientService {
      * @return середній час відповіді у секундах.
      */
     public double getAverageResponseTime(String duration) {
-        String query = "avg_over_time(response_time_seconds[" + duration + "])";
+        String query = "avg_over_time(http_server_requests_seconds_sum[" + duration + "]) / avg_over_time(http_server_requests_seconds_count[" + duration + "])";
         return executeQuery(query);
     }
 
@@ -38,10 +38,10 @@ public class PrometheusClientService {
      * @param duration - тривалість у форматі PromQL, наприклад "1m" або "5m".
      * @return error rate у відсотках.
      */
-    public double getErrorRate(String duration) {
-        String query = "(sum(rate(request_errors_total[" + duration + "])) / sum(rate(requests_total[" + duration + "])))*100";
+    /*public double getErrorRate(String duration) {
+        String query = "(sum(rate(http_server_requests_seconds_count{status=~\"5..\"}[" + duration + "])) / sum(rate(http_server_requests_seconds_count[" + duration + "])))*100";
         return executeQuery(query);
-    }
+    }*/
 
     /**
      * Повертає середнестатистичне значення завантаження CPU.
@@ -69,7 +69,7 @@ public class PrometheusClientService {
      * @return отримане числове значення або 0.0 у випадку помилки.
      */
     private double executeQuery(String query) {
-        String url = prometheusBaseUrl + "/api/v1/query?query=" + URLEncoder.encode(query, StandardCharsets.UTF_8);
+        String url = prometheusBaseUrl + "/api/v1/query?query=" + query;
         try {
             ResponseEntity<PrometheusResponse> responseEntity = restTemplate.getForEntity(url, PrometheusResponse.class);
             PrometheusResponse response = responseEntity.getBody();

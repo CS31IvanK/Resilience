@@ -31,6 +31,9 @@ public class RateLimiterImplementation {
         RateLimiterRegistry registry = RateLimiterRegistry.of(newConfig);
         this.rateLimiter = registry.rateLimiter("RateLimiter");
     }
+    public RateLimiter getRateLimiter() {
+        return this.rateLimiter;
+    }
     public String getConfig() {
         return this.rateLimiter.getRateLimiterConfig().toString();
     }

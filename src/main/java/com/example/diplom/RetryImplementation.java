@@ -30,6 +30,9 @@ public class RetryImplementation {
         RetryRegistry registry = RetryRegistry.of(newConfig);
         this.retry= registry.retry("Retry");
     }
+    public Retry getRetry() {
+        return this.retry;
+    }
     public String getConfig() {
         return this.retry.getRetryConfig().toString();
     }

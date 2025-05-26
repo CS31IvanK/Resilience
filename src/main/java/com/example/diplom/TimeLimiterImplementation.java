@@ -32,6 +32,9 @@ public class TimeLimiterImplementation {
         TimeLimiterRegistry registry = TimeLimiterRegistry.of(newConfig);
         this.timeLimiter = registry.timeLimiter("TimeLimiter");
     }
+    public TimeLimiter getTimeLimiter() {
+        return this.timeLimiter;
+    }
     public String getConfig() {
         return this.timeLimiter.getTimeLimiterConfig().toString();
     }

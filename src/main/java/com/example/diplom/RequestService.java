@@ -1,45 +1,32 @@
 package com.example.diplom;
 
 import org.springframework.stereotype.Service;
-
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
+import org.springframework.web.reactive.function.client.WebClient;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 public class RequestService {
 
-    private final AtomicInteger requestCount = new AtomicInteger(0); // Лічильник запитів
-    private volatile boolean failMode = false;
-    private static final int THRESHOLD = 10;
-    private static final long FAIL_DURATION_MS = 5000;
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    private final WebClient webClient;
+
+    public RequestService(WebClient.Builder webClientBuilder) {
+        this.webClient = webClientBuilder.baseUrl("http://localhost:8081").build();
+    }
 
     public String sendRequest(String patternName, int requestNumber) throws Exception {
-        if (failMode) {
-            throw new Exception("[" + patternName + "] Сервіс тимчасово недоступний для запиту #" + requestNumber);
+        long delay = 100;
+
+        // Додаємо випадкову додаткову затримку
+        if (ThreadLocalRandom.current().nextDouble() < 0.3) {
+            long extraDelay = ThreadLocalRandom.current().nextLong(200, 401);
+            delay += extraDelay;
         }
 
-        int count = requestCount.incrementAndGet();
-        if (count > THRESHOLD) {
-            failMode = true;
-            //System.out.println("[" + patternName + "] Запит #" + requestNumber + " перевищив поріг. Сервіс переходить у стан відмови...");
-            scheduler.schedule(() -> {
-                failMode = false;
-                //System.out.println("[" + patternName + "] Сервіс відновлено після запиту #" + requestNumber);
-            }, FAIL_DURATION_MS, TimeUnit.MILLISECONDS);
-
-            throw new Exception("[" + patternName + "] Сервіс перевантажено для запиту #" + requestNumber);
-        }
-
-        Thread.sleep(100);
-        return "[" + patternName + "] Response #" + requestNumber + " from https://example.com";
-    }
-
-    public void resetCounter() {
-        requestCount.set(0);
-    }
-
-    public boolean isFailMode() {
-        return failMode;
+        // Виконуємо HTTP-запит до іншого сервісу
+        return webClient.get()
+                .uri("/process?pattern=" + patternName + "&request=" + requestNumber + "&delay=" + delay)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
     }
 }
