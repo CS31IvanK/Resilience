@@ -17,7 +17,7 @@ public class TimeLimiterImplementation {
 
     public TimeLimiterImplementation() {
         TimeLimiterConfig config = TimeLimiterConfig.custom()
-                .timeoutDuration(Duration.ofSeconds(3))
+                .timeoutDuration(Duration.ofSeconds(1))
                 .build();
 
         TimeLimiterRegistry registry = TimeLimiterRegistry.of(config);

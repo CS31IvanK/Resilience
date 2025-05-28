@@ -37,7 +37,7 @@ public class DynamicConfigurationService {
     }
 
 
-    @Scheduled(fixedRate = 5000)
+    @Scheduled(fixedRate = 180000)
     public void updateDynamicConfigurations() {
         double avgResponseTime1m = prometheusClientService.getAverageResponseTime("1m");
         double avgResponseTime5m = prometheusClientService.getAverageResponseTime("5m");
@@ -60,14 +60,14 @@ public class DynamicConfigurationService {
             newTimeoutMillis = 500;
         }
         Duration newTimeLimiterTimeout = Duration.ofMillis(newTimeoutMillis);
-        System.out.println("Updating TimeLimiter timeout from current value "+ timeLimiterImplementation.getConfig() +" to: " + newTimeLimiterTimeout.toMillis() + " ms");
+        //System.out.println("Updating TimeLimiter timeout from current value "+ timeLimiterImplementation.getConfig() +" to: " + newTimeLimiterTimeout.toMillis() + " ms");
         TimeLimiterConfig newTimeLimiterConfig = TimeLimiterConfig.custom()
                 .timeoutDuration(newTimeLimiterTimeout)
                 .build();
         timeLimiterImplementation.updateConfig(newTimeLimiterConfig);
 
         //alternative
-        int newDuration = (int) ((avgResponseTime1m > avgResponseTime5m) ? avgResponseTime1m*100 : avgResponseTime1m)+1;
+        int newDuration = (int) ((avgResponseTime1m > avgResponseTime5m) ? (avgResponseTime1m-avgResponseTime5m)/2 : avgResponseTime5m)+1;
         CircuitBreakerConfig newCircuitBreakerConfig = CircuitBreakerConfig.custom()
                 .waitDurationInOpenState(Duration.ofSeconds(newDuration))
                 .build();
@@ -100,8 +100,8 @@ public class DynamicConfigurationService {
         rateLimiterImplementation.updateConfig(newRateLimiterConfig);*/
 
 
-        int newMaxConcurrentCalls = (cpuUsage > 0.5) ? 500 : 1000;
-        System.out.println("Updating Bulkhead max concurrent calls from " + bulkheadImplementation.getConfig() + " to: " + newMaxConcurrentCalls);
+        int newMaxConcurrentCalls = (cpuUsage > 0.01) ? 500 : 1000;
+        //System.out.println("Updating Bulkhead max concurrent calls from " + bulkheadImplementation.getConfig() + " to: " + newMaxConcurrentCalls);
         BulkheadConfig newBulkheadConfig = BulkheadConfig.custom()
                 .maxConcurrentCalls(newMaxConcurrentCalls)
                 .maxWaitDuration(Duration.ofSeconds(1))

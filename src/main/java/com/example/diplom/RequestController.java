@@ -7,9 +7,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 
 @RestController
 @RequestMapping("/process")
@@ -20,8 +18,8 @@ public class RequestController {
     private final BulkheadService bulkheadService;
     private final RateLimiterService rateLimiterService;
     private final TimeLimiterService timeLimiterService;
-    private final ExecutorService executorService = Executors.newFixedThreadPool(5);
-
+    private final ExecutorService executorService =
+            new ThreadPoolExecutor(300, 600, 60L, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
     @Autowired
     public RequestController(RetryService retryService,
                              CircuitBreakerService circuitBreakerService,

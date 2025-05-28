@@ -7,6 +7,7 @@ import io.github.resilience4j.core.functions.CheckedSupplier;
 import lombok.Getter;
 import org.springframework.stereotype.Component;
 import java.time.Duration;
+
 @Getter
 @Component
 public class CircuitBreakerImplementation {
@@ -14,7 +15,7 @@ public class CircuitBreakerImplementation {
 
     public CircuitBreakerImplementation() {
         CircuitBreakerConfig config = CircuitBreakerConfig.custom()
-                .failureRateThreshold(50)
+                .failureRateThreshold(30) // need to check this smh
                 .waitDurationInOpenState(Duration.ofSeconds(1))
                 .build();
 
