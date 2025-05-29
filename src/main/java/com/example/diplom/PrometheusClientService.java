@@ -33,6 +33,11 @@ public class PrometheusClientService {
         return executeQuery(query);
     }
 
+    public double getPercentileResponseTime(double percentile, String duration) {
+        String query = "histogram_quantile(" + (percentile / 100) +
+                ", sum(rate(http_server_requests_seconds_bucket[" + duration + "])) by (le))";
+        return executeQuery(query);
+    }
     /**
      * Повертає відсоток помилкових запитів за заданий період.
      * @param duration - тривалість у форматі PromQL, наприклад "1m" або "5m".

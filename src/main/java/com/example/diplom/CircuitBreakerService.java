@@ -4,20 +4,20 @@ import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
+
 @Getter
 @Service
-public class CircuitBreakerService {
+public class CircuitBreakerService extends RequestService {
     private final CircuitBreaker circuitBreaker;
-    private final RequestService requestService;
 
     @Autowired
-    public CircuitBreakerService(CircuitBreakerImplementation circuitBreakerImplementation, RequestService requestService) {
+    public CircuitBreakerService(CircuitBreakerImplementation circuitBreakerImplementation) {
         this.circuitBreaker = circuitBreakerImplementation.getCircuitBreaker();
-        this.requestService = requestService;
     }
 
-    public String sendRequest(int requestNumber) throws Throwable {
-        return circuitBreaker.executeCheckedSupplier(() -> requestService.sendRequest("CircuitBreaker", requestNumber));
+    public String sendRequest() throws Throwable {
+        return circuitBreaker.executeCheckedSupplier(() ->
+                simulateDelay("CircuitBreaker")
+        );
     }
 }

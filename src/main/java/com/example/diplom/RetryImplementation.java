@@ -16,7 +16,7 @@ public class RetryImplementation {
     public RetryImplementation() {
         RetryConfig config = RetryConfig.custom()
                 .maxAttempts(3)
-                .waitDuration(Duration.ofMillis(500))
+                .waitDuration(Duration.ofMillis(1000))
                 .build();
 
         RetryRegistry registry = RetryRegistry.of(config);

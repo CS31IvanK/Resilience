@@ -11,8 +11,7 @@ public class DiplomApplication {
 //boot
     public static void main(String[] args) {
         ApplicationContext context = SpringApplication.run(DiplomApplication.class, args);
-        RequestService requestService = context.getBean(RequestService.class);
-        //Monitoring monitoring = context.getBean(Monitoring.class);
+
     }
 
 }

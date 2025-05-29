@@ -16,7 +16,7 @@ public class CircuitBreakerImplementation {
     public CircuitBreakerImplementation() {
         CircuitBreakerConfig config = CircuitBreakerConfig.custom()
                 .failureRateThreshold(30) // need to check this smh
-                .waitDurationInOpenState(Duration.ofSeconds(1))
+                .waitDurationInOpenState(Duration.ofSeconds(10))
                 .build();
 
         CircuitBreakerRegistry registry = CircuitBreakerRegistry.of(config);

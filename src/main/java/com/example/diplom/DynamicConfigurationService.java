@@ -14,6 +14,11 @@ import java.time.Duration;
 @Service
 public class DynamicConfigurationService {
 
+    private final long startTime = System.currentTimeMillis();
+
+    private double historicalResponseTime1m = 0.0;
+    private double alpha = 0.3;
+
     private final PrometheusClientService prometheusClientService;
     private final TimeLimiterImplementation timeLimiterImplementation;
     private final CircuitBreakerImplementation circuitBreakerImplementation;
@@ -36,44 +41,58 @@ public class DynamicConfigurationService {
         this.retryImplementation = retryImplementation;
     }
 
-
-    @Scheduled(fixedRate = 180000)
+    @Scheduled(fixedRate = 60000)
     public void updateDynamicConfigurations() {
-        double avgResponseTime1m = prometheusClientService.getAverageResponseTime("1m");
+
+
+        double currentResponseTime1m = prometheusClientService.getAverageResponseTime("1m");
         double avgResponseTime5m = prometheusClientService.getAverageResponseTime("5m");
-        //double errorRate1m = prometheusClientService.getErrorRate("1m");
-        //double errorRate5m = prometheusClientService.getErrorRate("5m");
         double cpuUsage = prometheusClientService.getCpuUsage();
         double memoryUsage = prometheusClientService.getMemoryUsage();
+        double p90m1 = prometheusClientService.getPercentileResponseTime(90.0, "1m");
+        double p50m1 = prometheusClientService.getPercentileResponseTime(50.0, "1m");
+
+
+        if (historicalResponseTime1m == 0.0) {
+            historicalResponseTime1m = currentResponseTime1m;
+        } else {
+            historicalResponseTime1m = alpha * currentResponseTime1m + (1 - alpha) * historicalResponseTime1m;
+        }
 
         System.out.println("=== Prometheus Metrics ===");
-        System.out.println("Avg Response Time (1m): " + avgResponseTime1m + " sec");
+        System.out.println("Current Avg Response Time (1m): " + currentResponseTime1m + " sec");
+        System.out.println("Historical (smoothed) Response Time (1m): " + historicalResponseTime1m + " sec");
         System.out.println("Avg Response Time (5m): " + avgResponseTime5m + " sec");
-        //System.out.println("Error Rate (1m): " + errorRate1m + " %");
-        //System.out.println("Error Rate (5m): " + errorRate5m + " %");
         System.out.println("CPU Usage: " + cpuUsage);
         System.out.println("Memory Usage: " + memoryUsage + " bytes");
         System.out.println("==========================");
 
-        long newTimeoutMillis = (long) (avgResponseTime1m * 1500);
+
+        long elapsedTime = System.currentTimeMillis() - startTime;
+        if (elapsedTime < 10 * 60 * 1000) {
+            // System.out.println("Dynamic config disabled during observation period. Elapsed: " + (elapsedTime/60000) + " min");
+            return;
+        }
+
+
+        long newTimeoutMillis = (long) (historicalResponseTime1m * 1500);
         if (newTimeoutMillis < 500) {
             newTimeoutMillis = 500;
         }
         Duration newTimeLimiterTimeout = Duration.ofMillis(newTimeoutMillis);
-        //System.out.println("Updating TimeLimiter timeout from current value "+ timeLimiterImplementation.getConfig() +" to: " + newTimeLimiterTimeout.toMillis() + " ms");
         TimeLimiterConfig newTimeLimiterConfig = TimeLimiterConfig.custom()
                 .timeoutDuration(newTimeLimiterTimeout)
                 .build();
         timeLimiterImplementation.updateConfig(newTimeLimiterConfig);
 
         //alternative
-        int newDuration = (int) ((avgResponseTime1m > avgResponseTime5m) ? (avgResponseTime1m-avgResponseTime5m)/2 : avgResponseTime5m)+1;
+        int newDuration = (int) ((historicalResponseTime1m > avgResponseTime5m) ? (historicalResponseTime1m-avgResponseTime5m)/2 : avgResponseTime5m)+1;
         CircuitBreakerConfig newCircuitBreakerConfig = CircuitBreakerConfig.custom()
                 .waitDurationInOpenState(Duration.ofSeconds(newDuration))
                 .build();
         circuitBreakerImplementation.updateConfig(newCircuitBreakerConfig);
 
-        int rateLim =  (int) ((avgResponseTime1m > avgResponseTime5m) ? 300 : 500);
+        int rateLim = (historicalResponseTime1m > avgResponseTime5m) ? 200 : 400;
         RateLimiterConfig newRateLimiterConfig = RateLimiterConfig.custom()
                 .limitRefreshPeriod(Duration.ofSeconds(1))
                 .limitForPeriod(rateLim)
@@ -81,48 +100,19 @@ public class DynamicConfigurationService {
                 .build();
         rateLimiterImplementation.updateConfig(newRateLimiterConfig);
 
-        /*int newFailureThreshold = (errorRate1m > 5.0) ? 10 : 1;
-        System.out.println("Updating CircuitBreaker failure threshold from "+ circuitBreakerImplementation.getConfig() +" to: " + newFailureThreshold + " %"); //check this output
-        CircuitBreakerConfig newCircuitBreakerConfig = CircuitBreakerConfig.custom()
-                .failureRateThreshold(newFailureThreshold)
-                .waitDurationInOpenState(Duration.ofSeconds(1))
-                .build();
-        circuitBreakerImplementation.updateConfig(newCircuitBreakerConfig);
-
-
-        int newRateLimit = (errorRate1m > 5.0) ? 300 : 500;
-        System.out.println("Updating RateLimiter limit for period from "+ rateLimiterImplementation.getConfig() + " to: " + newRateLimit);
-        RateLimiterConfig newRateLimiterConfig = RateLimiterConfig.custom()
-                .limitRefreshPeriod(Duration.ofSeconds(1))
-                .limitForPeriod(newRateLimit)
-                .timeoutDuration(Duration.ofMillis(1000))
-                .build();
-        rateLimiterImplementation.updateConfig(newRateLimiterConfig);*/
-
-
-        int newMaxConcurrentCalls = (cpuUsage > 0.01) ? 500 : 1000;
-        //System.out.println("Updating Bulkhead max concurrent calls from " + bulkheadImplementation.getConfig() + " to: " + newMaxConcurrentCalls);
+        int newMaxConcurrentCalls = (historicalResponseTime1m > 1) ? 250 : 500;
         BulkheadConfig newBulkheadConfig = BulkheadConfig.custom()
                 .maxConcurrentCalls(newMaxConcurrentCalls)
                 .maxWaitDuration(Duration.ofSeconds(1))
                 .build();
         bulkheadImplementation.updateConfig(newBulkheadConfig);
 
-        //alternative
-        int retries =  (int) ((avgResponseTime1m > avgResponseTime5m) ? 4 : 8);
+        int retries = (p90m1 > 1.2 * p50m1) ? 3 : 5;
         RetryConfig newRetryConfig = RetryConfig.custom()
                 .maxAttempts(retries)
                 .waitDuration(Duration.ofMillis(500))
                 .build();
         retryImplementation.updateConfig(newRetryConfig);
-
-        /*int newMaxAttempts = (errorRate1m > 5.0) ? 3 : 5;
-        System.out.println("Updating Retry max attempts from "+ retryImplementation.getConfig() +" to: " + newMaxAttempts);
-        RetryConfig newRetryConfig = RetryConfig.custom()
-                .maxAttempts(newMaxAttempts)
-                .waitDuration(Duration.ofMillis(500))
-                .build();
-        retryImplementation.updateConfig(newRetryConfig);*/
 
         System.out.println("Dynamic configuration update complete.\n");
     }

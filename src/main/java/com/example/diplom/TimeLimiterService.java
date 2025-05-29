@@ -4,29 +4,22 @@ import io.github.resilience4j.timelimiter.TimeLimiter;
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.concurrent.CompletableFuture;
+
 @Getter
 @Service
-public class TimeLimiterService {
+public class TimeLimiterService extends RequestService {
     private final TimeLimiter timeLimiter;
-    private final RequestService requestService;
 
     @Autowired
-    public TimeLimiterService(TimeLimiterImplementation timeLimiterImplementation, RequestService requestService) {
+    public TimeLimiterService(TimeLimiterImplementation timeLimiterImplementation) {
         this.timeLimiter = timeLimiterImplementation.getTimeLimiter();
-        this.requestService = requestService;
     }
 
-    public String sendRequest(int requestNumber) throws Exception {
+    public String sendRequest() throws Throwable {
         return timeLimiter.executeFutureSupplier(() -> CompletableFuture.supplyAsync(() ->
-        {
-            try {
-                return requestService.sendRequest("TimeLimiter", requestNumber);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        }));
+                simulateDelay("TimeLimiter")
+        ));
     }
 }
