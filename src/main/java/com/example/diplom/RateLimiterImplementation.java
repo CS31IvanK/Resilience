@@ -16,8 +16,8 @@ public class RateLimiterImplementation {
     public RateLimiterImplementation() {
         RateLimiterConfig config = RateLimiterConfig.custom()
                 .limitRefreshPeriod(Duration.ofSeconds(1))
-                .limitForPeriod(5)
-                .timeoutDuration(Duration.ofMillis(1000))
+                .limitForPeriod(10)
+                .timeoutDuration(Duration.ofMillis(800))
                 .build();
 
         RateLimiterRegistry registry = RateLimiterRegistry.of(config);

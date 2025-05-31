@@ -21,7 +21,7 @@ public class RetryController {
             String response = retryService.sendRequest();
             return ResponseEntity.ok(response);
         } catch (Throwable t) {
-            System.out.println("Retry");
+            System.out.println("RE");
             return ResponseEntity.status(500)
                     .body("RE: " + t.getMessage());
         }

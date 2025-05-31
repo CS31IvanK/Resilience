@@ -21,7 +21,7 @@ public class TimeLimiterController {
             String response = timeLimiterService.sendRequest();
             return ResponseEntity.ok(response);
         } catch (Throwable t) {
-            System.out.println("TimeLimiterError");
+            System.out.println("TLE");
             return ResponseEntity.status(500)
                     .body("TLE: " + t.getMessage());
         }

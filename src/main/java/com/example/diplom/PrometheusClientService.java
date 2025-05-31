@@ -3,9 +3,14 @@ package com.example.diplom;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.task.TaskExecutionProperties;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -17,10 +22,12 @@ public class PrometheusClientService {
 
     private final RestTemplate restTemplate;
     private final String prometheusBaseUrl;
+    private final TaskExecutionProperties taskExecutionProperties;
 
-    public PrometheusClientService(@Value("${prometheus.url}") String prometheusUrl) {
+    public PrometheusClientService(@Value("${prometheus.url}") String prometheusUrl, TaskExecutionProperties taskExecutionProperties) {
         this.prometheusBaseUrl = prometheusUrl;
         this.restTemplate = new RestTemplate();
+        this.taskExecutionProperties = taskExecutionProperties;
     }
 
     /**
@@ -29,7 +36,8 @@ public class PrometheusClientService {
      * @return середній час відповіді у секундах.
      */
     public double getAverageResponseTime(String duration) {
-        String query = "avg_over_time(http_server_requests_seconds_sum[" + duration + "]) / avg_over_time(http_server_requests_seconds_count[" + duration + "])";
+        String query = "sum(avg_over_time(http_server_requests_seconds_sum[" + duration + "]))  " +
+        "/ sum(avg_over_time(http_server_requests_seconds_count[" + duration + "]))";
         return executeQuery(query);
     }
 
@@ -37,6 +45,57 @@ public class PrometheusClientService {
         String query = "histogram_quantile(" + (percentile / 100) +
                 ", sum(rate(http_server_requests_seconds_bucket[" + duration + "])) by (le))";
         return executeQuery(query);
+    }
+
+    public double getAvgForEndpoint(String duration, String endpoint) {
+
+        try {
+            String query = URLEncoder.encode("avg_over_time(http_server_requests_seconds_sum[" + duration + "]) / avg_over_time(http_server_requests_seconds_count[" + duration + "])", StandardCharsets.UTF_8);
+            URL url = new URL("http://localhost:9090/api/v1/query?query=" + query);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode jsonResponse = objectMapper.readTree(connection.getInputStream());
+
+            JsonNode results = jsonResponse.get("data").get("result");
+            connection.disconnect();
+            for (JsonNode metricEntry : results) {
+                String uri = metricEntry.get("metric").get("uri").asText();
+
+                if (uri.equals(endpoint)) {
+                    return metricEntry.get("value").get(1).asDouble();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return -1.0; // Якщо значення не знайдено
+    }
+
+    public double getPercForEndpoint(String duration, double percentile, String endpoint) {
+
+        try {
+            URL url = new URL("http://localhost:9090/api/v1/query?query=histogram_quantile(" + (percentile / 100) + ", rate(http_server_requests_seconds_bucket[" + duration + "]))");
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode jsonResponse = objectMapper.readTree(connection.getInputStream());
+
+            JsonNode results = jsonResponse.get("data").get("result");
+            connection.disconnect();
+            for (JsonNode metricEntry : results) {
+                String uri = metricEntry.get("metric").get("uri").asText();
+
+                if (uri.equals(endpoint)) {
+                    return metricEntry.get("value").get(1).asDouble();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return -1.0; // Якщо значення не знайдено
     }
     /**
      * Повертає відсоток помилкових запитів за заданий період.

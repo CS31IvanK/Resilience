@@ -17,7 +17,6 @@ public class DynamicConfigurationService {
     private final long startTime = System.currentTimeMillis();
 
     private double historicalResponseTime1m = 0.0;
-    private double alpha = 0.3;
 
     private final PrometheusClientService prometheusClientService;
     private final TimeLimiterImplementation timeLimiterImplementation;
@@ -56,6 +55,7 @@ public class DynamicConfigurationService {
         if (historicalResponseTime1m == 0.0) {
             historicalResponseTime1m = currentResponseTime1m;
         } else {
+            double alpha = 0.6;
             historicalResponseTime1m = alpha * currentResponseTime1m + (1 - alpha) * historicalResponseTime1m;
         }
 
@@ -69,13 +69,12 @@ public class DynamicConfigurationService {
 
 
         long elapsedTime = System.currentTimeMillis() - startTime;
-        if (elapsedTime < 10 * 60 * 1000) {
+        if (elapsedTime < 5 * 60 * 1000) {
             // System.out.println("Dynamic config disabled during observation period. Elapsed: " + (elapsedTime/60000) + " min");
             return;
         }
 
-
-        long newTimeoutMillis = (long) (historicalResponseTime1m * 1500);
+        long newTimeoutMillis = (long) (historicalResponseTime1m * 1250);
         if (newTimeoutMillis < 500) {
             newTimeoutMillis = 500;
         }
@@ -86,34 +85,39 @@ public class DynamicConfigurationService {
         timeLimiterImplementation.updateConfig(newTimeLimiterConfig);
 
         //alternative
-        int newDuration = (int) ((historicalResponseTime1m > avgResponseTime5m) ? (historicalResponseTime1m-avgResponseTime5m)/2 : avgResponseTime5m)+1;
+        double cbavg =  prometheusClientService.getAvgForEndpoint("5m", "/circuitbreaker");
+        int newDuration = (int) ((historicalResponseTime1m > cbavg) ? (historicalResponseTime1m * 2) : cbavg)+1;
         CircuitBreakerConfig newCircuitBreakerConfig = CircuitBreakerConfig.custom()
                 .waitDurationInOpenState(Duration.ofSeconds(newDuration))
                 .build();
         circuitBreakerImplementation.updateConfig(newCircuitBreakerConfig);
 
-        int rateLim = (historicalResponseTime1m > avgResponseTime5m) ? 200 : 400;
+        double rlavg = prometheusClientService.getAvgForEndpoint("5m", "/ratelimiter");
+
+        int rateLim = (historicalResponseTime1m > rlavg) ? 5 : 20;
         RateLimiterConfig newRateLimiterConfig = RateLimiterConfig.custom()
-                .limitRefreshPeriod(Duration.ofSeconds(1))
                 .limitForPeriod(rateLim)
-                .timeoutDuration(Duration.ofMillis(1000))
+                .timeoutDuration(Duration.ofSeconds((long) ( rlavg+0.1)))
                 .build();
         rateLimiterImplementation.updateConfig(newRateLimiterConfig);
 
-        int newMaxConcurrentCalls = (historicalResponseTime1m > 1) ? 250 : 500;
+        double bavg = prometheusClientService.getAvgForEndpoint("5m", "/bulkhead");
+        int newMaxConcurrentCalls = (historicalResponseTime1m > bavg) ? 150 : 200;
         BulkheadConfig newBulkheadConfig = BulkheadConfig.custom()
                 .maxConcurrentCalls(newMaxConcurrentCalls)
-                .maxWaitDuration(Duration.ofSeconds(1))
+                .maxWaitDuration(Duration.ofSeconds((long) (bavg+0.1)))
                 .build();
         bulkheadImplementation.updateConfig(newBulkheadConfig);
 
-        int retries = (p90m1 > 1.2 * p50m1) ? 3 : 5;
+        double rp90 = prometheusClientService.getPercForEndpoint("1m", 90.0, "/retry");
+        double rp50 = prometheusClientService.getPercForEndpoint("1m",50.0,  "/retry");
+        int retries = (rp90 > 1.15 * rp50) ? 2 : 4;
         RetryConfig newRetryConfig = RetryConfig.custom()
                 .maxAttempts(retries)
-                .waitDuration(Duration.ofMillis(500))
+                .waitDuration(Duration.ofMillis(400))
                 .build();
         retryImplementation.updateConfig(newRetryConfig);
-
+        System.out.println("timelimiter " + newTimeoutMillis + " duration " + newDuration + " ratelim " + rateLim + " newMaxConcurrentCalls " + newMaxConcurrentCalls + " retries " + retries);
         System.out.println("Dynamic configuration update complete.\n");
     }
 }

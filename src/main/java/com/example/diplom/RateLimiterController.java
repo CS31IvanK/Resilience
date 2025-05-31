@@ -21,7 +21,7 @@ public class RateLimiterController {
             String response = rateLimiterService.sendRequest();
             return ResponseEntity.ok(response);
         } catch (Throwable t) {
-            System.out.println("RateLimiterError");
+            System.out.println("RLE");
 
             return ResponseEntity.status(500)
                     .body("RLE: " + t.getMessage());

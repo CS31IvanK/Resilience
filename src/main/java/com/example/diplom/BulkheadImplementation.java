@@ -15,8 +15,8 @@ public class BulkheadImplementation {
 
     public BulkheadImplementation() {
         BulkheadConfig config = BulkheadConfig.custom()
-                .maxConcurrentCalls(290)
-                .maxWaitDuration(Duration.ofSeconds(1))
+                .maxConcurrentCalls(200)
+                .maxWaitDuration(Duration.ofMillis(1))
                 .build();
 
         BulkheadRegistry registry = BulkheadRegistry.of(config);

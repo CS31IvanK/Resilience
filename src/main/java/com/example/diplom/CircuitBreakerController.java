@@ -21,7 +21,7 @@ public class CircuitBreakerController {
             String response = circuitBreakerService.sendRequest();
             return ResponseEntity.ok(response);
         } catch (Throwable t) {
-            System.out.println("CircuitbreakerError");
+            System.out.println("CBE");
             return ResponseEntity.status(500)
                     .body("CBE: " + t.getMessage());
         }

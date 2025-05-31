@@ -21,7 +21,7 @@ public class BulkheadController {
             String response = bulkheadService.sendRequest();
             return ResponseEntity.ok(response);
         } catch (Throwable t) {
-            System.out.println("BulkheadError");
+            System.out.println("BE");
 
             return ResponseEntity.status(500)
                     .body("BE: " + t.getMessage());
